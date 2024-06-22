@@ -1,0 +1,349 @@
+--- /home/c0des1ayer/Documents/Sonic/sonic3air_game/savedata/mods/erz_flight/scripts/main.lemon
++++ /home/c0des1ayer/Documents/Sonic/sonic3air_game/savedata/mods/knuckles_swim/scripts/swim.lemon
+@@ -1,36 +1,18 @@
+-//-------------------------------------------------------//
+-// Global Values                                         //
+-//-------------------------------------------------------//
+-
+-global u8 Setting.ERZFlight.HyperDash
+-global u8 Setting.ERZFlight.DashCost
+-global u8 Setting.ERZFlight.DashCooldown
+-global u8 Setting.ERZFlight.DashFlash 
+-//-------------------------------------------------------//
+-// Player Functions                                      //
+-//-------------------------------------------------------//
++// here's ya swim script
+ function void Character.updateJumpMoves()
+ {
+ 	u8 input_state     = (char.character == CHARACTER_TAILS) ? control.tails.state   : control.player1.state
+ 	u8 input_pressed   = (char.character == CHARACTER_TAILS) ? control.tails.pressed : control.player1.pressed
+ 	bool isSuperActive = (char.character == CHARACTER_TAILS) ? super.active.tails    : super.active
+-	if (char.jumping) && (char.double_jump_state >= 0xF0)
++	if (char.jumping) && (char.double_jump_state >= 0xE5)
+ 	{
+-		// Limit velocity.y
+-		s16 max_vy = (char.flags & char.flag.UNDERWATER) ? -0x200 : -0x400
++		// cap velocity.y & x
++		s16 max_vy = -0x300
+ 
+ 		// Check if pressed jump again in mid-air
+-		if (input_pressed & CONTROL_ABC)
++		if (input_pressed & CONTROL_C)
+ 		{
+-			if (char.character == CHARACTER_SONIC)
+-			{
+-				SonicPressedJumpInMidAir()
+-			}
+-			else if (char.character == CHARACTER_TAILS)
+-			{
+-				TailsPressedJumpInMidAir()
+-			}
+-			else if (char.character == CHARACTER_KNUCKLES)
++			if (char.character == CHARACTER_KNUCKLES)
+ 			{
+ 				KnucklesPressedJumpInMidAir()
+ 			}
+@@ -42,183 +24,20 @@
+ 	}
+ }
+ 
+-function void SonicPressedJumpInMidAir()
+-{
+-	if (super.active != 0)
+-	{
+-		if (char.double_jump_state == 0)
+-		{
+-			char.double_jump_state = 0xF0
+-			char.velocity.y = 0
+-			return
+-		}
+-		else if (char.double_jump_state == 0xF0) && (Setting.ERZFlight.HyperDash == 1 || Setting.ERZFlight.HyperDash == 2 && super.active & 0x80)
+-		{
+-			if (Setting.ERZFlight.DashCost == 0) && (ring_counter < 5)
+-			{
+-				return
+-			}
+-			else if (Setting.ERZFlight.DashCost == 0)
+-			{
+-				ring_counter -= 5
+-			}
+-			Character.ClearEnemiesOnScreen()
+-
+-			camera.locktime.player1 = 0x2000
+-			ClearPositionBackup()
+-
+-			char.double_jump_state = (Setting.ERZFlight.DashCooldown == 1) ? 0xFF : char.double_jump_state
+-			global.whiteflash_timeout = Setting.ERZFlight.DashFlash ? 4 : 0 
+-
+-			Audio.playAudio("erzdash", AudioContext.CONTEXT_SOUND)
+-			Audio.playAudio("peelout_release", AudioContext.CONTEXT_SOUND)
+-
+-			u8 input = control.player1.state & 0x0f	// Only directions
+-			if (input != 0 && input < 0x0b)		// Not left and right at the same time
+-			{
+-				// Perform Hyper Dash
+-				A1 = 0x011afa + input * 4
+-				char.velocity.x  = s16[A1]
+-				char.velocity.y  = s16[A1+2]
+-				char.groundspeed = s16[A1]
+-			}
+-			else
+-			{
+-				s16 vx = (char.flags & char.flag.FACING_LEFT) ? -0x800 : 0x800
+-				char.velocity.x = vx
+-				char.velocity.y = 0
+-				char.groundspeed = vx
+-			}
+-		}
+-		return
+-	}
+-	base.SonicPressedJumpInMidAir()
+-}
+-
+-function void TailsPressedJumpInMidAir()
+-{
+-	if (super.active.tails != 0)
+-	{
+-		if (char.double_jump_state == 0)
+-		{
+-			char.double_jump_state = 0xF0
+-			char.velocity.y = 0
+-			return
+-		}
+-		else if (char.double_jump_state == 0xF0) && (Setting.ERZFlight.HyperDash == 1 || Setting.ERZFlight.HyperDash == 2 && super.active.tails & 0x80)
+-		{
+-			if (Setting.ERZFlight.DashCost == 0) && (ring_counter < 5)
+-			{
+-				return
+-			}
+-			else if (Setting.ERZFlight.DashCost == 0)
+-			{
+-				ring_counter -= 5
+-			}
+-			Character.ClearEnemiesOnScreen()
+-
+-			camera.locktime.player1 = 0x2000
+-			ClearPositionBackup()
+-
+-			char.double_jump_state = (Setting.ERZFlight.DashCooldown == 1) ? 0xFF : char.double_jump_state
+-			global.whiteflash_timeout = Setting.ERZFlight.DashFlash ? 4 : 0 
+-
+-			Audio.playAudio("erzdash", AudioContext.CONTEXT_SOUND)
+-			Audio.playAudio("peelout_release", AudioContext.CONTEXT_SOUND)
+-
+-			u8 input = control.player1.state & 0x0f	// Only directions
+-			if (input != 0 && input < 0x0b)		// Not left and right at the same time
+-			{
+-				// Perform Hyper Dash
+-				A1 = 0x011afa + input * 4
+-				char.velocity.x  = s16[A1]
+-				char.velocity.y  = s16[A1+2]
+-				char.groundspeed = s16[A1]
+-			}
+-			else
+-			{
+-				s16 vx = (char.flags & char.flag.FACING_LEFT) ? -0x800 : 0x800
+-				char.velocity.x = vx
+-				char.velocity.y = 0
+-				char.groundspeed = vx
+-			}
+-		}
+-		return
+-	}
+-	base.TailsPressedJumpInMidAir()
+-}
+-
+ function void KnucklesPressedJumpInMidAir()
+ {
+-	if (super.active != 0)
++	if ((!(super.active)) && (char.flags & char.flag.UNDERWATER))
+ 	{
+-		if (char.double_jump_state == 0)
++		if ((char.double_jump_state == 0) && (char.flags & char.flag.UNDERWATER))
+ 		{
+-			char.double_jump_state = 0xF0
++			isKnuxSwimming = 1
++			shouldShowTransition = 1
++			char.double_jump_state = 0xE5
+ 			char.velocity.y = 0
+-		}
+-		else if (char.double_jump_state == 0xF0) && (Setting.ERZFlight.HyperDash == 1 || Setting.ERZFlight.HyperDash == 2 && super.active & 0x80)
+-		{
+-			if (Setting.ERZFlight.DashCost == 0) && (ring_counter < 5)
+-			{
+-				return
+-			}
+-			else if (Setting.ERZFlight.DashCost == 0)
+-			{
+-				ring_counter -= 5
+-			}
+-			Character.ClearEnemiesOnScreen()
+-
+-			camera.locktime.player1 = 0x2000
+-			ClearPositionBackup()
+-
+-			char.double_jump_state = (Setting.ERZFlight.DashCooldown == 1) ? 0xFF : char.double_jump_state
+-			global.whiteflash_timeout = Setting.ERZFlight.DashFlash ? 4 : 0 
+-
+-			Audio.playAudio("erzdash", AudioContext.CONTEXT_SOUND)
+-			Audio.playAudio("peelout_release", AudioContext.CONTEXT_SOUND)
+-
+-			u8 input = control.player1.state & 0x0f	// Only directions
+-			if (input != 0 && input < 0x0b)		// Not left and right at the same time
+-			{
+-				// Perform Hyper Dash
+-				A1 = 0x011afa + input * 4
+-				char.velocity.x  = s16[A1]
+-				char.velocity.y  = s16[A1+2]
+-				char.groundspeed = s16[A1]
+-			}
+-			else
+-			{
+-				s16 vx = (char.flags & char.flag.FACING_LEFT) ? -0x800 : 0x800
+-				char.velocity.x = vx
+-				char.velocity.y = 0
+-				char.groundspeed = vx
+-			}
+ 		}
+ 		return
+ 	}
+ 	base.KnucklesPressedJumpInMidAir()
+-}
+-
+-//# address-hook(0x010bba) end(0x010c8e)
+-function void Character.UpdateNormalState.Sonic()
+-{
+-	base.Character.UpdateNormalState.Sonic()
+-	if (char.double_jump_state >= 0xF0) && (super.active) // flight
+-	{
+-		Character.UpdateERZFlight()
+-	}
+-}
+-
+-//# address-hook(0x0137c4) end(0x0138f4)
+-function void Character.UpdateNormalState.Tails()
+-{
+-	base.Character.UpdateNormalState.Tails()
+-
+-	if (char.double_jump_state >= 0xF0) && (super.active.tails) // flight
+-	{
+-		Character.UpdateERZFlight()
+-	}
+ }
+ 
+ //# address-hook(0x01656c) end(0x016640)
+@@ -226,50 +45,89 @@
+ {
+ 	base.Character.UpdateNormalState.Knuckles()
+ 
+-	if (char.double_jump_state >= 0xF0) && (super.active) // flight
++	if ((char.double_jump_state >= 0xE5) && (char.flags & char.flag.UNDERWATER)) // swim
+ 	{
+-		Character.UpdateERZFlight()
++		Character.FrameUpdateKnuxSwim()
+ 	}
++	else if ((char.double_jump_state >= 0xE5) && !(char.flags & char.flag.UNDERWATER))
++	{
++		char.double_jump_state = 1
++		char.state = char.state.KNUX_FALLING
++		isKnuxSwimming = 0
++	}
++	else if (!(char.double_jump_state >= 0xE5)) && (isKnuxSwimming)
++	{
++		char.double_jump_state = 0
++		char.state = char.state.ROLLING
++		isKnuxSwimming = 0
++	}
++
+ }
+-function void Character.UpdateERZFlight()
++function void Character.FrameUpdateKnuxSwim()
+ {
+-	char.flags &= ~char.flag.CONTROL_LOCK
+-	// Originally coded by Bluestreak, edited by Lemons
+-	char.state = char.state.RUNNING
+-	char.groundspeed = (char.flags & char.flag.FACING_LEFT) ? -0x800 : 0x800
+-	// reduce fall speed
+-	char.velocity.y -= 0x38 
+-	char.flags &= ~char.flag.PUSHING
+-	if (char.flags & char.flag.UNDERWATER)
++	s16 maxvx = 0x300
++	char.flags&=~char.flag.CONTROL_LOCK
++	char.state = char.state.KNUX_FLYCLIMB
++	char.velocity.y-=0x10 
++	char.flags&=~char.flag.PUSHING
++		
++	if (!(control.player1.state & CONTROL_UP)) && (!(control.player1.state & CONTROL_DOWN))
+ 	{
+-		// Gravity
+-		char.velocity.y += 0x28
+-	}
+-		
+-	if ((control.player1.state & CONTROL_UP) == 0) && ((control.player1.state & CONTROL_DOWN) == 0)
+-	{
+-		if (char.velocity.y > 0x2) // sub velo for momentum reasons
++		if (char.velocity.y > 0x2) // sub velo due to momentum
+ 		{
+ 			char.velocity.y -= 0x8
+ 		}
+-		else if (char.velocity.y < -0x2) // momentum reasons
++		else if (char.velocity.y < -0x2) // momentum
+ 		{
+ 			char.velocity.y += 0x8
+ 		}
+-		else // snap it.
++		else // lock in
+ 		{
+ 			char.velocity.y = 0
+ 		}
+ 	}
+-	if (control.player1.state & CONTROL_UP) //yada yada up to go up
++	if (!(control.player1.state & CONTROL_LEFT)) && (!(control.player1.state & CONTROL_RIGHT))
+ 	{
+-		char.velocity.y -= 0x20
++		if (char.velocity.x > 0x2) // sub velo due to momentum
++		{
++			char.velocity.x -= 0x8
++		}
++		else if (char.velocity.x < -0x2) // momentum
++		{
++			char.velocity.x += 0x8
++		}
++		else // lock in
++		{
++			char.velocity.x = 0
++		}
+ 	}
+-	else if (control.player1.state & CONTROL_DOWN) // get down!
++	if abs(char.velocity.x) > 0x2A || abs(char.velocity.y) > 0x2A // are you moving enough?
+ 	{
+-		char.velocity.y += 0x20
++		shouldShowTransition = (isKnuxMoving) ? 0 : 1 // are you still moving?
++		isKnuxMoving = 1
+ 	}
+-	if (char.double_jump_state > 0xF0)
++	else
++	{
++		shouldShowTransition = (!(isKnuxMoving)) ? 0 : 1  // are you still idle?
++		isKnuxMoving = 0
++	}
++	if (control.player1.state & CONTROL_UP) // up goes up, duh
++	{
++		char.velocity.y -= 0x12
++	}
++	else if (control.player1.state & CONTROL_DOWN) // get down
++	{
++		char.velocity.y += 0x12
++	}
++	else if (control.player1.state & CONTROL_LEFT) // slide to the left
++	{
++		char.velocity.x -= (abs(char.velocity.x) >= maxvx) ? 0 : 0x12
++	}
++	else if (control.player1.state & CONTROL_RIGHT) // slide to the right
++	{
++		char.velocity.x += (abs(char.velocity.x) >= maxvx) ? 0 : 0x12
++	}
++	if (char.double_jump_state > 0xE5)
+ 	{
+ 		char.double_jump_state -= 1
+ 	}
