@@ -19,7 +19,7 @@
  	u8 input_pressed   = (char.character == CHARACTER_TAILS) ? control.tails.pressed : control.player1.pressed
  	bool isSuperActive = (char.character == CHARACTER_TAILS) ? super.active.tails    : super.active
 -	if (char.jumping) && (char.double_jump_state >= 0xF0)
-+	if (char.jumping) && (char.double_jump_state >= 0xE5)
++	if (char.jumping) && (char.double_jump_state >= 0xF4)
  	{
 -		// Limit velocity.y
 -		s16 max_vy = (char.flags & char.flag.UNDERWATER) ? -0x200 : -0x400
@@ -27,8 +27,7 @@
 +		s16 max_vy = -0x300
  
  		// Check if pressed jump again in mid-air
--		if (input_pressed & CONTROL_ABC)
-+		if (input_pressed & CONTROL_C)
+ 		if (input_pressed & CONTROL_ABC)
  		{
 -			if (char.character == CHARACTER_SONIC)
 -			{
@@ -159,12 +158,12 @@
 +	if ((!(super.active)) && (char.flags & char.flag.UNDERWATER))
  	{
 -		if (char.double_jump_state == 0)
-+		if ((char.double_jump_state == 0) && (char.flags & char.flag.UNDERWATER))
++		if ((char.double_jump_state == 0) && (char.jumping) && (char.flags & char.flag.UNDERWATER))
  		{
 -			char.double_jump_state = 0xF0
 +			isKnuxSwimming = 1
 +			shouldShowTransition = 1
-+			char.double_jump_state = 0xE5
++			char.double_jump_state = 0xF4
  			char.velocity.y = 0
 -		}
 -		else if (char.double_jump_state == 0xF0) && (Setting.ERZFlight.HyperDash == 1 || Setting.ERZFlight.HyperDash == 2 && super.active & 0x80)
@@ -232,26 +231,32 @@
  }
  
  //# address-hook(0x01656c) end(0x016640)
-@@ -226,50 +45,89 @@
+@@ -226,50 +45,95 @@
  {
  	base.Character.UpdateNormalState.Knuckles()
  
 -	if (char.double_jump_state >= 0xF0) && (super.active) // flight
-+	if ((char.double_jump_state >= 0xE5) && (char.flags & char.flag.UNDERWATER)) // swim
++	if ((char.double_jump_state >= 0xF4) && (char.flags & char.flag.UNDERWATER)) // swim
  	{
 -		Character.UpdateERZFlight()
 +		Character.FrameUpdateKnuxSwim()
  	}
-+	else if ((char.double_jump_state >= 0xE5) && !(char.flags & char.flag.UNDERWATER))
++	else if ((char.double_jump_state >= 0xF4) && !(char.flags & char.flag.UNDERWATER))
 +	{
 +		char.double_jump_state = 1
 +		char.state = char.state.KNUX_FALLING
 +		isKnuxSwimming = 0
 +	}
-+	else if (!(char.double_jump_state >= 0xE5)) && (isKnuxSwimming)
++	else if ((char.base_state == base_state.HURT) || (char.base_state == base_state.DIED)) && (isKnuxSwimming)
 +	{
 +		char.double_jump_state = 0
-+		char.state = char.state.ROLLING
++		char.state = (char.base_state == base_state.DIED) ? char.state.DIED : char.state.GOT_HURT
++		isKnuxSwimming = 0
++	}
++	else if (!(char.double_jump_state >= 0xF4)) && (isKnuxSwimming)
++	{
++		char.double_jump_state = 0
++		char.state = char.state.RUNNING
 +		isKnuxSwimming = 0
 +	}
 +
@@ -259,19 +264,17 @@
 -function void Character.UpdateERZFlight()
 +function void Character.FrameUpdateKnuxSwim()
  {
--	char.flags &= ~char.flag.CONTROL_LOCK
++	s16 maxvx = 0x370
+ 	char.flags &= ~char.flag.CONTROL_LOCK
 -	// Originally coded by Bluestreak, edited by Lemons
 -	char.state = char.state.RUNNING
 -	char.groundspeed = (char.flags & char.flag.FACING_LEFT) ? -0x800 : 0x800
 -	// reduce fall speed
 -	char.velocity.y -= 0x38 
--	char.flags &= ~char.flag.PUSHING
--	if (char.flags & char.flag.UNDERWATER)
-+	s16 maxvx = 0x300
-+	char.flags&=~char.flag.CONTROL_LOCK
 +	char.state = char.state.KNUX_FLYCLIMB
-+	char.velocity.y-=0x10 
-+	char.flags&=~char.flag.PUSHING
++	char.velocity.y -= 0x10 
+ 	char.flags &= ~char.flag.PUSHING
+-	if (char.flags & char.flag.UNDERWATER)
 +		
 +	if (!(control.player1.state & CONTROL_UP)) && (!(control.player1.state & CONTROL_DOWN))
  	{
@@ -337,13 +340,13 @@
 +	}
 +	else if (control.player1.state & CONTROL_LEFT) // slide to the left
 +	{
-+		char.velocity.x -= (abs(char.velocity.x) >= maxvx) ? 0 : 0x12
++		char.velocity.x -= (abs(char.velocity.x) > maxvx) ? 0 : 0x12
 +	}
 +	else if (control.player1.state & CONTROL_RIGHT) // slide to the right
 +	{
-+		char.velocity.x += (abs(char.velocity.x) >= maxvx) ? 0 : 0x12
++		char.velocity.x += (abs(char.velocity.x) > maxvx) ? 0 : 0x12
 +	}
-+	if (char.double_jump_state > 0xE5)
++	if (char.double_jump_state > 0xF4)
  	{
  		char.double_jump_state -= 1
  	}
