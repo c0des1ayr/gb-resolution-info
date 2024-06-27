@@ -15,19 +15,23 @@
 +// here's ya swim script
  function void Character.updateJumpMoves()
  {
- 	u8 input_state     = (char.character == CHARACTER_TAILS) ? control.tails.state   : control.player1.state
- 	u8 input_pressed   = (char.character == CHARACTER_TAILS) ? control.tails.pressed : control.player1.pressed
- 	bool isSuperActive = (char.character == CHARACTER_TAILS) ? super.active.tails    : super.active
+-	u8 input_state     = (char.character == CHARACTER_TAILS) ? control.tails.state   : control.player1.state
+-	u8 input_pressed   = (char.character == CHARACTER_TAILS) ? control.tails.pressed : control.player1.pressed
+-	bool isSuperActive = (char.character == CHARACTER_TAILS) ? super.active.tails    : super.active
 -	if (char.jumping) && (char.double_jump_state >= 0xF0)
++	u8 input_state     = (char.character == 1) ? control.tails.state   : control.player1.state
++	u8 input_pressed   = (char.character == 1) ? control.tails.pressed : control.player1.pressed
++	bool isSuperActive = (char.character == 1) ? super.active.tails    : super.active
 +	if (char.jumping) && (char.double_jump_state >= 0xF4)
  	{
 -		// Limit velocity.y
 -		s16 max_vy = (char.flags & char.flag.UNDERWATER) ? -0x200 : -0x400
 +		// cap velocity.y & x
-+		s16 max_vy = -0x300
++		s16 max_vy = -0x2FF
  
  		// Check if pressed jump again in mid-air
- 		if (input_pressed & CONTROL_ABC)
+-		if (input_pressed & CONTROL_ABC)
++		if (input_pressed & 0x0070)
  		{
 -			if (char.character == CHARACTER_SONIC)
 -			{
@@ -38,11 +42,11 @@
 -				TailsPressedJumpInMidAir()
 -			}
 -			else if (char.character == CHARACTER_KNUCKLES)
-+			if (char.character == CHARACTER_KNUCKLES)
++			if (char.character == 2)
  			{
  				KnucklesPressedJumpInMidAir()
  			}
-@@ -42,183 +24,20 @@
+@@ -42,235 +24,117 @@
  	}
  }
  
@@ -155,16 +159,13 @@
  function void KnucklesPressedJumpInMidAir()
  {
 -	if (super.active != 0)
-+	if ((!(super.active)) && (char.flags & char.flag.UNDERWATER))
++	if ((!(super.active)) && (char.flags & 0x40))
  	{
 -		if (char.double_jump_state == 0)
-+		if ((char.double_jump_state == 0) && (char.jumping) && (char.flags & char.flag.UNDERWATER))
++		if ((char.double_jump_state == 0x00) && (char.jumping) && (char.flags & 0x40))
  		{
 -			char.double_jump_state = 0xF0
-+			isKnuxSwimming = 1
-+			shouldShowTransition = 1
-+			char.double_jump_state = 0xF4
- 			char.velocity.y = 0
+-			char.velocity.y = 0
 -		}
 -		else if (char.double_jump_state == 0xF0) && (Setting.ERZFlight.HyperDash == 1 || Setting.ERZFlight.HyperDash == 2 && super.active & 0x80)
 -		{
@@ -203,12 +204,16 @@
 -				char.velocity.y = 0
 -				char.groundspeed = vx
 -			}
++			isKnuxSwimming = 0x01
++			shouldShowTransition = 0x01
++			char.double_jump_state = 0xF4
++			char.velocity.y = 0x00
  		}
  		return
  	}
  	base.KnucklesPressedJumpInMidAir()
--}
--
+ }
+ 
 -//# address-hook(0x010bba) end(0x010c8e)
 -function void Character.UpdateNormalState.Sonic()
 -{
@@ -228,56 +233,63 @@
 -	{
 -		Character.UpdateERZFlight()
 -	}
- }
- 
- //# address-hook(0x01656c) end(0x016640)
-@@ -226,50 +45,95 @@
+-}
+-
+-//# address-hook(0x01656c) end(0x016640)
++//# address-hook(0x01656c)
+ function void Character.UpdateNormalState.Knuckles()
  {
  	base.Character.UpdateNormalState.Knuckles()
- 
--	if (char.double_jump_state >= 0xF0) && (super.active) // flight
-+	if ((char.double_jump_state >= 0xF4) && (char.flags & char.flag.UNDERWATER)) // swim
- 	{
--		Character.UpdateERZFlight()
++	// swim
++	if ((char.double_jump_state >= 0xF4) && (char.flags & 0x40))
++	{
 +		Character.FrameUpdateKnuxSwim()
- 	}
-+	else if ((char.double_jump_state >= 0xF4) && !(char.flags & char.flag.UNDERWATER))
-+	{
-+		char.double_jump_state = 1
-+		char.state = char.state.KNUX_FALLING
-+		isKnuxSwimming = 0
 +	}
-+	else if ((char.base_state == base_state.HURT) || (char.base_state == base_state.DIED)) && (isKnuxSwimming)
++	else if ((char.double_jump_state >= 0xF4) && !(char.flags & 0x40))
 +	{
-+		char.double_jump_state = 0
-+		char.state = (char.base_state == base_state.DIED) ? char.state.DIED : char.state.GOT_HURT
-+		isKnuxSwimming = 0
++		char.double_jump_state = 0x01
++		char.state = 0x21
++		isKnuxSwimming = 0x00
++	}
++	else if ((char.base_state == 0x04) || (char.base_state == 0x0c) || (char.base_state == 0x06)) && (isKnuxSwimming)
++	{
++		char.double_jump_state = 0x00
++		char.state = (char.base_state == 0x0c) ? 0x17 : (char.base_state == 0x06) ? 0x18 : 0x1a
++		isKnuxSwimming = 0x00
 +	}
 +	else if (!(char.double_jump_state >= 0xF4)) && (isKnuxSwimming)
 +	{
-+		char.double_jump_state = 0
-+		char.state = char.state.RUNNING
-+		isKnuxSwimming = 0
++		char.double_jump_state = 0x00
++		char.state = 0x00
++		isKnuxSwimming = 0x00
 +	}
-+
- }
--function void Character.UpdateERZFlight()
+ 
+-	if (char.double_jump_state >= 0xF0) && (super.active) // flight
++}
 +function void Character.FrameUpdateKnuxSwim()
- {
++{
 +	s16 maxvx = 0x370
- 	char.flags &= ~char.flag.CONTROL_LOCK
++	char.flags &= ~0x10
++	char.state = 0x20
++	char.velocity.y -= 0x10 
++	char.flags &= ~0x20
++		
++	if (!(control.player1.state & CONTROL_UP)) && (!(control.player1.state & CONTROL_DOWN))
+ 	{
+-		Character.UpdateERZFlight()
+-	}
+-}
+-function void Character.UpdateERZFlight()
+-{
+-	char.flags &= ~char.flag.CONTROL_LOCK
 -	// Originally coded by Bluestreak, edited by Lemons
 -	char.state = char.state.RUNNING
 -	char.groundspeed = (char.flags & char.flag.FACING_LEFT) ? -0x800 : 0x800
 -	// reduce fall speed
 -	char.velocity.y -= 0x38 
-+	char.state = char.state.KNUX_FLYCLIMB
-+	char.velocity.y -= 0x10 
- 	char.flags &= ~char.flag.PUSHING
+-	char.flags &= ~char.flag.PUSHING
 -	if (char.flags & char.flag.UNDERWATER)
-+		
-+	if (!(control.player1.state & CONTROL_UP)) && (!(control.player1.state & CONTROL_DOWN))
- 	{
+-	{
 -		// Gravity
 -		char.velocity.y += 0x28
 -	}
@@ -285,12 +297,12 @@
 -	if ((control.player1.state & CONTROL_UP) == 0) && ((control.player1.state & CONTROL_DOWN) == 0)
 -	{
 -		if (char.velocity.y > 0x2) // sub velo for momentum reasons
-+		if (char.velocity.y > 0x2) // sub velo due to momentum
++		if (char.velocity.y > 0x2)
  		{
  			char.velocity.y -= 0x8
  		}
 -		else if (char.velocity.y < -0x2) // momentum reasons
-+		else if (char.velocity.y < -0x2) // momentum
++		else if (char.velocity.y < -0x2)
  		{
  			char.velocity.y += 0x8
  		}
@@ -304,11 +316,11 @@
 +	if (!(control.player1.state & CONTROL_LEFT)) && (!(control.player1.state & CONTROL_RIGHT))
  	{
 -		char.velocity.y -= 0x20
-+		if (char.velocity.x > 0x2) // sub velo due to momentum
++		if (char.velocity.x > 0x2)
 +		{
 +			char.velocity.x -= 0x8
 +		}
-+		else if (char.velocity.x < -0x2) // momentum
++		else if (char.velocity.x < -0x2)
 +		{
 +			char.velocity.x += 0x8
 +		}
@@ -321,14 +333,15 @@
 +	if abs(char.velocity.x) > 0x2A || abs(char.velocity.y) > 0x2A // are you moving enough?
  	{
 -		char.velocity.y += 0x20
-+		shouldShowTransition = (isKnuxMoving) ? 0 : 1 // are you still moving?
-+		isKnuxMoving = 1
++		shouldShowTransition = (isKnuxMoving) ? 0x00 : 0x01 // are you still moving?
++		isKnuxMoving = 0x01
  	}
 -	if (char.double_jump_state > 0xF0)
 +	else
-+	{
-+		shouldShowTransition = (!(isKnuxMoving)) ? 0 : 1  // are you still idle?
-+		isKnuxMoving = 0
+ 	{
+-		char.double_jump_state -= 1
++		shouldShowTransition = (!(isKnuxMoving)) ? 0x00 : 0x01  // are you still idle?
++		isKnuxMoving = 0x00
 +	}
 +	if (control.player1.state & CONTROL_UP) // up goes up, duh
 +	{
@@ -340,13 +353,15 @@
 +	}
 +	else if (control.player1.state & CONTROL_LEFT) // slide to the left
 +	{
-+		char.velocity.x -= (abs(char.velocity.x) > maxvx) ? 0 : 0x12
++		char.velocity.x -= (abs(char.velocity.x) > maxvx) ? 0x00 : 0x12
 +	}
 +	else if (control.player1.state & CONTROL_RIGHT) // slide to the right
 +	{
-+		char.velocity.x += (abs(char.velocity.x) > maxvx) ? 0 : 0x12
++		char.velocity.x += (abs(char.velocity.x) > maxvx) ? 0x00 : 0x12
 +	}
 +	if (char.double_jump_state > 0xF4)
- 	{
- 		char.double_jump_state -= 1
++	{
++		char.double_jump_state -= 0x01
  	}
+ }
+\ No newline at end of file
